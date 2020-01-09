@@ -8,6 +8,14 @@
 //  - [Chinese] https://docs.cocos.com/creator/manual/zh/scripting/life-cycle-callbacks.html
 //  - [English] https://www.cocos2d-x.org/docs/creator/manual/en/scripting/life-cycle-callbacks.html
 
+var WheelW = require("WheelW");
+var WheelE = require("WheelE");
+
+var BikeDirection = cc.Enum({
+    EAST: 1,
+    WEST: 2,
+});
+
 cc.Class({
     extends: cc.Component,
 
@@ -29,18 +37,19 @@ cc.Class({
         // },
         wheelJointW: {
             default: null,
-            type: cc.WheelJoint,
+            type: WheelW,
         },
         wheelJointE: {
             default: null,
-            type: cc.WheelJoint,
+            type: WheelE,
         },
     },
 
     // LIFE-CYCLE CALLBACKS:
 
     onLoad () {
-        this.keyUp = false;
+        this.spaceUp = true;
+        this.direction = BikeDirection.EAST;
         cc.systemEvent.on(cc.SystemEvent.EventType.KEY_DOWN, this.onKeyDown, this);
         cc.systemEvent.on(cc.SystemEvent.EventType.KEY_UP, this.onKeyUp, this);
     },
@@ -51,23 +60,50 @@ cc.Class({
     },
 
     onKeyDown: function (event) {
-        cc.log("onKeyDown");
+        //cc.log("onKeyDown");
         switch(event.keyCode) {
             case cc.macro.KEY.up:{
-                //cc.log("cc.macro.KEY.up "+this.wheelJointW.motorSpeed);
-                cc.log("cc.macro.KEY.up "+this.wheelJointW.enableMotor);
-                this.wheelJointW.enableMotor = true;
-                cc.log("cc.macro.KEY.up "+this.wheelJointW.enableMotor);
+                this.getActiveWheel().enableMotor = true;
+                break;
+            }
+//            case cc.macro.KEY.down:{
+//                //cc.log("asdf");
+//                //this.getActiveWheel().maxMotorTorque = 0;
+//                this.getActiveWheel().enableMotor = true;
+//                this.getActiveWheel().motorSpeed = 0;
+//                break;
+//            }
+            case cc.macro.KEY.space:{
+                if(this.spaceUp){
+                    this.spaceUp = false;
+                    var oldEnableMotor = this.getActiveWheel().enableMotor;
+                    //var oldMaxMotorTorque = this.getActiveWheel().maxMotorTorque;
+                    this.getActiveWheel().enableMotor = false;
+                    //this.getActiveWheel().maxMotorTorque = 1000;
+                    this.direction = this.getOppositeDirect(this.direction);
+                    this.getActiveWheel().enableMotor = oldEnableMotor;
+                    //this.getActiveWheel().enableMotor = oldMaxMotorTorque;
+                }
                 break;
             }
         }
     },
 
     onKeyUp: function (event) {
-        cc.log("onKeyUp");
+        //cc.log("onKeyUp");
         switch(event.keyCode) {
             case cc.macro.KEY.up:{
-                this.wheelJointW.enableMotor = false;
+                this.getActiveWheel().enableMotor = false;
+                break;
+            }
+//            case cc.macro.KEY.down:{
+//                //this.getActiveWheel().maxMotorTorque = 1000;
+//                this.getActiveWheel().enableMotor = false;
+//                this.getActiveWheel().motorSpeed = 500;
+//                break;
+//            }
+            case cc.macro.KEY.space:{
+                this.spaceUp = true;
                 break;
             }
         }
@@ -77,4 +113,25 @@ cc.Class({
     },
 
     update (dt) {},
+
+    getActiveWheel () {
+        if (this.direction == BikeDirection.EAST){
+            return this.wheelJointW;
+        }
+        if (this.direction == BikeDirection.WEST){
+            return this.wheelJointE;
+        }
+        return null;
+    },
+
+    getOppositeDirect(d) {
+        if (d == BikeDirection.EAST){
+            return BikeDirection.WEST;
+        }
+        if (d == BikeDirection.WEST){
+            return BikeDirection.EAST;
+        }
+        return null;
+    },
+
 });
