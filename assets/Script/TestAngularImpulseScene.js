@@ -30,7 +30,7 @@ cc.Class({
         testBody: {
             default: null,
             type: cc.RigidBody,
-        }
+        },
     },
 
     // LIFE-CYCLE CALLBACKS:
@@ -49,50 +49,46 @@ cc.Class({
             ;
         cc.systemEvent.on(cc.SystemEvent.EventType.KEY_DOWN, this.onKeyDown, this);
         cc.systemEvent.on(cc.SystemEvent.EventType.KEY_UP, this.onKeyUp, this);
+        cc.director.getPhysicsManager().on('before-step', this.onBeforStep, this);
     },
 
     onDestroy () {
         cc.systemEvent.off(cc.SystemEvent.EventType.KEY_DOWN, this.onKeyDown, this);
         cc.systemEvent.off(cc.SystemEvent.EventType.KEY_UP, this.onKeyUp, this);
-    },
-
-    onKeyDown: function (event) {
-        switch(event.keyCode) {
-            case cc.macro.KEY.left:{
-                //this.testBody.applyAngularImpulse(100);
-                this.keyLeftDown = true;
-                break;
-            }
-            case cc.macro.KEY.right:{
-                //this.testBody.applyAngularImpulse(100);
-                this.keyRightDown = true;
-                break;
-            }
-        }
-    },
-
-    onKeyUp: function (event) {
-        switch(event.keyCode) {
-            case cc.macro.KEY.left:{
-                //this.testBody.applyAngularImpulse(100);
-                this.keyLeftDown = false;
-                this.testBody.applyTorque (100);
-                break;
-            }
-            case cc.macro.KEY.right:{
-                //this.testBody.applyAngularImpulse(100);
-                this.keyRightDown = false;
-                this.testBody.applyTorque (100);
-                break;
-            }
-        }
+        cc.director.getPhysicsManager().off('before-step', this.onBeforStep, this);
     },
 
     start () {
 
     },
 
-    update (dt) {
+    onKeyDown: function (event) {
+        switch(event.keyCode) {
+            case cc.macro.KEY.left:{
+                this.keyLeftDown = true;
+                break;
+            }
+            case cc.macro.KEY.right:{
+                this.keyRightDown = true;
+                break;
+            }
+        }
+    },
+    
+    onKeyUp: function (event) {
+        switch(event.keyCode) {
+            case cc.macro.KEY.left:{
+                this.keyLeftDown = false;
+                break;
+            }
+            case cc.macro.KEY.right:{
+                this.keyRightDown = false;
+                break;
+            }
+        }
+    },
+
+    onBeforStep: function() {
         var torque = 0;
         if(this.keyLeftDown){
             torque += 400;
@@ -101,7 +97,9 @@ cc.Class({
             torque -= 400;
         }
         if(torque!=0){
-            this.testBody.applyTorque (torque);
+            this.testBody.applyAngularImpulse (torque);
         }
     },
+
+    update (dt) {},
 });

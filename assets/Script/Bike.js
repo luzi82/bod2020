@@ -16,6 +16,9 @@ var BikeDirection = cc.Enum({
     WEST: 2,
 });
 
+var MOTOR_SPEED = 500;
+var ROTATE_TORQUE = 10000;
+
 cc.Class({
     extends: cc.Component,
 
@@ -35,6 +38,10 @@ cc.Class({
         //         this._bar = value;
         //     }
         // },
+        body: {
+            default: null,
+            type: cc.RigidBody,
+        },
         wheelJointW: {
             default: null,
             type: WheelW,
@@ -48,41 +55,49 @@ cc.Class({
     // LIFE-CYCLE CALLBACKS:
 
     onLoad () {
+        this.keyUpDown = false;
+        this.keyDownDown = false;
+        this.keyLeftDown = false;
+        this.keyRightDown = false;
+
         this.spaceUp = true;
         this.direction = BikeDirection.EAST;
+
         cc.systemEvent.on(cc.SystemEvent.EventType.KEY_DOWN, this.onKeyDown, this);
         cc.systemEvent.on(cc.SystemEvent.EventType.KEY_UP, this.onKeyUp, this);
+        cc.director.getPhysicsManager().on('before-step', this.onBeforStep, this);
     },
 
     onDestroy () {
         cc.systemEvent.off(cc.SystemEvent.EventType.KEY_DOWN, this.onKeyDown, this);
         cc.systemEvent.off(cc.SystemEvent.EventType.KEY_UP, this.onKeyUp, this);
+        cc.director.getPhysicsManager().off('before-step', this.onBeforStep, this);
     },
 
     onKeyDown: function (event) {
         //cc.log("onKeyDown");
         switch(event.keyCode) {
             case cc.macro.KEY.up:{
-                this.getActiveWheel().enableMotor = true;
+                this.keyUpDown = true;
                 break;
             }
-//            case cc.macro.KEY.down:{
-//                //cc.log("asdf");
-//                //this.getActiveWheel().maxMotorTorque = 0;
-//                this.getActiveWheel().enableMotor = true;
-//                this.getActiveWheel().motorSpeed = 0;
-//                break;
-//            }
+            case cc.macro.KEY.down:{
+                // this.getActiveWheel().enableMotor = true;
+                this.keyDownDown = true;
+                break;
+            }
+            case cc.macro.KEY.left:{
+                this.keyLeftDown = true;
+                break;
+            }
+            case cc.macro.KEY.right:{
+                this.keyRightDown = true;
+                break;
+            }
             case cc.macro.KEY.space:{
                 if(this.spaceUp){
                     this.spaceUp = false;
-                    var oldEnableMotor = this.getActiveWheel().enableMotor;
-                    //var oldMaxMotorTorque = this.getActiveWheel().maxMotorTorque;
-                    this.getActiveWheel().enableMotor = false;
-                    //this.getActiveWheel().maxMotorTorque = 1000;
                     this.direction = this.getOppositeDirect(this.direction);
-                    this.getActiveWheel().enableMotor = oldEnableMotor;
-                    //this.getActiveWheel().enableMotor = oldMaxMotorTorque;
                 }
                 break;
             }
@@ -93,7 +108,19 @@ cc.Class({
         //cc.log("onKeyUp");
         switch(event.keyCode) {
             case cc.macro.KEY.up:{
-                this.getActiveWheel().enableMotor = false;
+                this.keyUpDown = false;
+                break;
+            }
+            case cc.macro.KEY.down:{
+                this.keyDownDown = false;
+                break;
+            }
+            case cc.macro.KEY.left:{
+                this.keyLeftDown = false;
+                break;
+            }
+            case cc.macro.KEY.right:{
+                this.keyRightDown = false;
                 break;
             }
 //            case cc.macro.KEY.down:{
@@ -113,6 +140,52 @@ cc.Class({
     },
 
     update (dt) {},
+
+    onBeforStep: function() {
+        // speed
+        var frontWheel = null;
+        var backWheel = null;
+        var motorSpeed = 0;
+        if (this.direction == BikeDirection.EAST) {
+            frontWheel = this.wheelJointE;
+            backWheel = this.wheelJointW;
+            motorSpeed = -MOTOR_SPEED;
+        } else if (this.direction == BikeDirection.WEST) {
+            frontWheel = this.wheelJointW;
+            backWheel = this.wheelJointE;
+            motorSpeed = MOTOR_SPEED;
+        }
+        if ((!this.keyUpDown)&&(!this.keyDownDown)) {
+            frontWheel.enableMotor = false;
+            backWheel.enableMotor = false;
+        } else if ((!this.keyUpDown)&&( this.keyDownDown)) {
+            frontWheel.enableMotor = true;
+            frontWheel.motorSpeed = 0;
+            backWheel.enableMotor = true;
+            backWheel.motorSpeed = 0;
+        } else if (( this.keyUpDown)&&(!this.keyDownDown)) {
+            frontWheel.enableMotor = true;
+            frontWheel.motorSpeed = motorSpeed;
+            backWheel.enableMotor = false;
+        } else if (( this.keyUpDown)&&( this.keyDownDown)) {
+            frontWheel.enableMotor = true;
+            frontWheel.motorSpeed = motorSpeed;
+            backWheel.enableMotor = true;
+            backWheel.motorSpeed = 0;
+        }
+    
+        // torque
+        var torque = 0;
+        if(this.keyLeftDown){
+            torque += ROTATE_TORQUE;
+        }
+        if(this.keyRightDown){
+            torque -= ROTATE_TORQUE;
+        }
+        if(torque!=0){
+            this.body.applyAngularImpulse (torque);
+        }
+    },
 
     getActiveWheel () {
         if (this.direction == BikeDirection.EAST){
